@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Stroke Detection Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #e3f2fd;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .navbar {
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            width: 100%;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            max-width: 80%;
+            white-space: pre-line;
+            font-size: 16px;
+        }
+        .user-message {
+            background: linear-gradient(45deg, #00c6ff, #0072ff);
+            color: white;
+            text-align: right;
+            margin-left: auto;
+        }
+        .bot-message {
+            background: #f1f1f1;
+            border-left: 4px solid #2a5298;
+            text-align: left;
+        }
+        .input-bar {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: white;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 600px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 12px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .input-bar input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .input-bar button {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        .input-bar button:hover {
+            background: linear-gradient(45deg, #ff4b2b, #ff416c);
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">AI Stroke Detection Chat</div>
+
+    <div class="chat-container" id="chat-container">
+        <div class="message bot-message">Hello! I can help you detect stroke risks and provide prevention tips. Please enter your symptoms or medical history.</div>
+    </div>
+
+    <div class="input-bar">
+        <input type="text" id="user-input" placeholder="Enter symptoms, age, medical history...">
+        <button id="send-button">Send</button>
+    </div>
+
+    <script>
+        const apiKey = "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";
+        const apiUrl = "https://openrouter.ai/api/v1/chat/completions";
+
+        async function callAPI(messages) {
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${apiKey}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "google/gemini-2.0-pro-exp-02-05:free",
+                    messages: [
+                        { role: "system", content: "You are an AI that only provides stroke-related information. Detect stroke types based on symptoms, assess risks, and provide prevention tips. Ignore unrelated queries." },
+                        ...messages
+                    ]
+                })
+            });
+            return response.json();
+        }
+
+        function extractMedicalEntities(text) {
+            const medicalEntities = [
+                "stroke", "ischemic stroke", "hemorrhagic stroke", "TIA", "mini-stroke",
+                "blood clot", "brain bleed", "slurred speech", "face drooping", "numbness",
+                "weakness", "vision loss", "high blood pressure", "heart disease", "cholesterol",
+                "diabetes", "FAST test", "stroke prevention", "stroke symptoms"
+            ];
+            return medicalEntities.some(entity => text.toLowerCase().includes(entity));
+        }
+
+        async function sendMessage() {
+            let input = document.getElementById("user-input").value.trim();
+            if (!input) return;
+
+            let chatContainer = document.getElementById("chat-container");
+            chatContainer.innerHTML += `<div class="message user-message">${input}</div>`;
+            document.getElementById("user-input").value = "";
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            if (!extractMedicalEntities(input)) {
+                chatContainer.innerHTML += `<div class="message bot-message">I can only answer stroke-related questions. Please enter stroke symptoms, risks, or prevention queries.</div>`;
+                return;
+            }
+
+            const messages = [{ role: "user", content: input }];
+            chatContainer.innerHTML += `<div class="message bot-message">Analyzing symptoms...</div>`;
+
+            let response = await callAPI(messages);
+            let reply = response.choices?.[0]?.message?.content || "I'm unable to analyze this right now.";
+            chatContainer.innerHTML += `<div class="message bot-message">${reply}</div>`;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        document.getElementById("send-button").addEventListener("click", sendMessage);
+    </script>
+</body>
+</html>
